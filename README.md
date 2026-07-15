@@ -160,7 +160,7 @@ Firebase rejects requests from unknown domains. Add your GitHub Pages domain:
 
 1. Firebase Console > **Authentication** > **Settings** tab
 2. **Authorized domains** > **Add domain**
-3. Add: `YOUR_USERNAME.github.io`
+3. Add: `YOUR_USERNAME.github.io` eg(tawanda2020-wq.github.io)
 
 ### 7.5 Three Live Dashboard URLs
 | Dashboard    | URL                                                                            |
