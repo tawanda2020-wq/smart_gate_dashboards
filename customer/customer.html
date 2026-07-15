@@ -22,21 +22,30 @@
         <h1>SmartGate</h1>
         <p>Customer Portal</p>
       </div>
+
       <div class="form-group">
-        <label class="form-label">Phone Number</label>
-        <input id="login-phone" type="tel" class="form-input" placeholder="+263771234567">
+        <label class="form-label">Your Phone Number</label>
+        <input id="login-phone" type="tel" class="form-input" placeholder="+263771234567" maxlength="13">
+        <p class="text-sm text-muted mt-1">Enter your 10-digit number (digits only, or with +263)</p>
       </div>
+
       <div class="form-group">
-        <label class="form-label">Password</label>
-        <input id="login-password" type="password" class="form-input" placeholder="••••••">
+        <label class="form-label">Confirm Phone Number</label>
+        <input id="login-phone-confirm" type="tel" class="form-input" placeholder="+263771234567" maxlength="13">
       </div>
-      <button class="btn btn-primary btn-full" onclick="handleLogin()">Sign In</button>
+
+      <div id="login-error" class="hidden"
+        style="background:#fee2e2;color:#991b1b;padding:10px 14px;border-radius:6px;font-size:13px;margin-bottom:14px">
+      </div>
+
+      <button class="btn btn-primary btn-full" onclick="handleLogin()">Continue →</button>
+
       <p class="text-center text-sm text-muted mt-3">
-        Demo account - any credentials will work for prototype
+        Your phone number is used to track your orders. No password needed.
       </p>
       <p class="text-center text-sm mt-3">
-      <a href="../index.html" style="color:var(--teal);font-weight:600">← Back to Home</a>
-    </p>
+        <a href="../index.html" style="color:var(--teal);font-weight:600">← Back to Home</a>
+      </p>
     </div>
   </div>
 
@@ -120,6 +129,20 @@
                   style="justify-content:space-between;font-weight:700;font-size:15px;margin-bottom:16px">
                   <span>Total</span>
                   <span id="cart-total">$0.00</span>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">Delivery Box ID</label>
+                  <div
+                    style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--gray-100);border-radius:6px;border:1.5px solid var(--gray-200)">
+                    <span style="font-size:20px">📦</span>
+                    <div>
+                      <div style="font-weight:700;color:var(--navy);font-family:monospace;font-size:16px">BOX-001</div>
+                      <div class="text-sm text-muted">Gate locker unit - Harare</div>
+                    </div>
+                    <span class="badge badge-green" style="margin-left:auto">Active</span>
+                  </div>
+                  <p class="text-sm text-muted mt-1">This is the only registered delivery box for this prototype.</p>
                 </div>
 
                 <div class="form-group">

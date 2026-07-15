@@ -227,7 +227,12 @@ In the firmware's `config.h`, the values must match your Firebase project:
 Open three browser tabs (or three different browsers/devices):
 
 ### Tab 1 - Customer Portal
-1. Sign in with any phone number
+
+1. Customer enters phone number twice (validation, no password)
+   Phone # saved to sessionStorage - survives refresh
+   Box ID is hardcoded (since we have 1 box) and shown to customer
+   Tracking page auto-loads their latest order by phone # from Firebase
+
 2. Add items to cart, fill address, click the map to drop a location pin
 3. Click **Place Order**
 4. Switch to **Track Delivery** - status shows `PENDING`
