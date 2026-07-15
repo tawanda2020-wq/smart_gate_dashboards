@@ -25,18 +25,30 @@ let allAlerts  = [];
 // ---------------------------------------------------------------------------
 // Login (prototype: hardcoded credentials)
 // ---------------------------------------------------------------------------
-window.handleAdminLogin = function () {
+window.handleAdminLogin = async function () {
   const user = document.getElementById('admin-user').value.trim();
   const pass = document.getElementById('admin-pass').value.trim();
 
-  if (user === 'admin' && pass === 'admin123') {
-    document.getElementById('login-screen').classList.add('hidden');
-    document.getElementById('dashboard').classList.remove('hidden');
-    initAdmin();
-    feather.replace();
-  } else {
+  if (user !== 'admin' || pass !== 'admin123') {
     showToast('Invalid credentials. Use admin / admin123', 'error');
+    return;
   }
+
+  // Ensure anonymous Firebase session before any DB reads/writes
+  try {
+    const { signInAnonymously } = await import(
+      "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js"
+    );
+    const { auth } = await import('../firebase-config.js');
+    await signInAnonymously(auth);
+  } catch (authErr) {
+    console.warn('[Auth] Anonymous sign-in failed:', authErr.message);
+  }
+
+  document.getElementById('login-screen').classList.add('hidden');
+  document.getElementById('dashboard').classList.remove('hidden');
+  initAdmin();
+  feather.replace();
 };
 
 // ---------------------------------------------------------------------------

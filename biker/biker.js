@@ -29,19 +29,32 @@ const SIM_BOUNDS = { latMin: -17.88, latMax: -17.77, lonMin: 30.99, lonMax: 31.0
 // ---------------------------------------------------------------------------
 // Login
 // ---------------------------------------------------------------------------
-window.handleBikerLogin = function () {
+window.handleBikerLogin = async function () {
   const bikerId = document.getElementById('biker-id-input').value.trim();
   const pass    = document.getElementById('biker-pass').value.trim();
 
   if (!bikerId) { showToast('Enter your Biker ID', 'warning'); return; }
 
-  // Prototype: check against Firebase /bikers node
-  get(ref(db, `bikers/${bikerId}`)).then(snap => {
+  // Ensure anonymous Firebase session exists before any DB read
+  try {
+    const { signInAnonymously } = await import(
+      "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js"
+    );
+    const { auth } = await import('../firebase-config.js');
+    await signInAnonymously(auth);
+  } catch (authErr) {
+    console.warn('[Auth] Anonymous sign-in failed:', authErr.message);
+    // Continue anyway - rules are now public-read for /bikers
+  }
+
+  try {
+    const snap = await get(ref(db, `bikers/${bikerId}`));
+
     if (!snap.exists()) {
       showToast('Biker ID not found in system.', 'error');
       return;
     }
-    // Prototype: password is always "biker123"
+
     if (pass !== 'biker123') {
       showToast('Incorrect password.', 'error');
       return;
@@ -54,7 +67,11 @@ window.handleBikerLogin = function () {
 
     feather.replace();
     initBikerDashboard();
-  });
+
+  } catch (err) {
+    console.error('[Login] Firebase read failed:', err.message);
+    showToast('Login failed: ' + err.message, 'error');
+  }
 };
 
 // ---------------------------------------------------------------------------

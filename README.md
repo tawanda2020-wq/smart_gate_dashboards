@@ -74,7 +74,29 @@ The dashboards sign into Firebase anonymously so they can read/write the RTDB.
 
 ## Step 4 - Set Security Rules
 1. Firebase Console > **Build > Realtime Database** > **Rules** tab
-2. Delete the existing rules and paste the contents of `firebase-rules.json`
+and paste,
+```json
+{
+  "rules": {
+    "orders": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "bikers": {
+      ".read": true,
+      ".write": "auth != null"
+    },
+    "locker": {
+      ".read": true,
+      ".write": true
+    },
+    "deliveryLogs": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    }
+  }
+}
+```
 3. Click **Publish**
 
 > **Prototype note:** The rules use `auth != null` which allows any anonymous session

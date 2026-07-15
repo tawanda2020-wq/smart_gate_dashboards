@@ -43,11 +43,22 @@ let currentCustomer  = null;
 // ---------------------------------------------------------------------------
 // Login
 // ---------------------------------------------------------------------------
-window.handleLogin = function () {
+window.handleLogin = async function () {
   const phone = document.getElementById('login-phone').value.trim();
   const name  = document.getElementById('delivery-name')?.value.trim() || 'Customer';
 
   if (!phone) { showToast('Please enter your phone number', 'warning'); return; }
+
+  // Ensure anonymous Firebase session before any DB reads/writes
+  try {
+    const { signInAnonymously } = await import(
+      "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js"
+    );
+    const { auth } = await import('../firebase-config.js');
+    await signInAnonymously(auth);
+  } catch (authErr) {
+    console.warn('[Auth] Anonymous sign-in failed:', authErr.message);
+  }
 
   currentCustomer = { phone, name: name || phone };
   document.getElementById('customer-name-display').textContent = phone;

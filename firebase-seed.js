@@ -115,5 +115,9 @@ async function seedDatabase() {
 }
 
 // Auto-run if loaded as a <script type="module"> in the browser
-// Comment this out if you only want manual invocation
-seedDatabase();
+//seedDatabase();
+
+// NOT auto-run - call manually from browser console: seedDatabase()
+// Or open seed.html 
+window.seedDatabase = seedDatabase;
+console.log('[SEED] Ready. Run seedDatabase() in console to seed the database.');
