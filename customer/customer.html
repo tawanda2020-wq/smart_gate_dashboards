@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SmartDelivery - Customer Portal</title>
+  <link rel="stylesheet" href="../shared/style.css">
+  <!-- Leaflet.js for map -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <!-- Feather Icons -->
+  <script src="https://unpkg.com/feather-icons/dist/feather.min.js"></script>
+</head>
+<body>
+
+<!-- ── Login Screen ──────────────────────────────────────────────────────── -->
+<div id="login-screen" class="login-page">
+  <div class="login-card">
+    <div class="login-logo">
+      <div style="font-size:42px">📦</div>
+      <h1>SmartGate</h1>
+      <p>Customer Portal</p>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Phone Number</label>
+      <input id="login-phone" type="tel" class="form-input" placeholder="+263771234567">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Password</label>
+      <input id="login-password" type="password" class="form-input" placeholder="••••••">
+    </div>
+    <button class="btn btn-primary btn-full" onclick="handleLogin()">Sign In</button>
+    <p class="text-center text-sm text-muted mt-3">
+      Demo account - any credentials will work for prototype
+    </p>
+  </div>
+</div>
+
+<!-- ── Main Dashboard ────────────────────────────────────────────────────── -->
+<div id="dashboard" class="page-grid hidden">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div style="font-size:28px">📦</div>
+      <div>
+        <div class="logo-text">SmartGate</div>
+        <div class="logo-sub">Customer Portal</div>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Main</div>
+      <a class="nav-link active" onclick="showSection('order')">
+        <i data-feather="shopping-cart"></i> Place Order
+      </a>
+      <a class="nav-link" onclick="showSection('track')">
+        <i data-feather="map-pin"></i> Track Delivery
+      </a>
+      <a class="nav-link" onclick="showSection('history')">
+        <i data-feather="clock"></i> Order History
+      </a>
+      <a class="nav-link" onclick="showSection('notifications')">
+        <i data-feather="bell"></i> Notifications
+        <span id="notif-badge" class="badge badge-red hidden" style="margin-left:auto">0</span>
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <div id="customer-name-display" style="font-weight:600;color:#fff;margin-bottom:4px">—</div>
+      <div style="font-size:11px">Customer Account</div>
+      <button class="btn btn-sm btn-danger mt-2 btn-full" onclick="logout()">Sign Out</button>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <div>
+    <div class="topbar">
+      <span class="topbar-title" id="section-title">Place Order</span>
+      <div class="topbar-actions">
+        <span id="locker-status-pill" class="badge badge-gray">Locker: -</span>
+      </div>
+    </div>
+
+    <div class="main-content">
+
+      <!-- ── SECTION: Place Order ─────────────────────────────────────────── -->
+      <section id="section-order">
+        <div class="page-header">
+          <h2>Place a New Order</h2>
+          <p>Select products, confirm your delivery location, and submit.</p>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 380px;gap:20px">
+
+          <!-- Product Catalogue -->
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Product Catalogue</span>
+            </div>
+            <div id="catalogue" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px">
+              <!-- Rendered by JS -->
+            </div>
+          </div>
+
+          <!-- Order Summary -->
+          <div>
+            <div class="card">
+              <div class="card-header">
+                <span class="card-title">Order Summary</span>
+              </div>
+              <div id="cart-items" style="min-height:80px;margin-bottom:16px">
+                <p class="text-muted text-sm">Your cart is empty.</p>
+              </div>
+              <hr class="divider">
+              <div class="flex items-center" style="justify-content:space-between;font-weight:700;font-size:15px;margin-bottom:16px">
+                <span>Total</span>
+                <span id="cart-total">$0.00</span>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Delivery Address</label>
+                <input id="delivery-address" type="text" class="form-input" placeholder="123 Samora Machel Ave, Harare">
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Customer Name</label>
+                <input id="delivery-name" type="text" class="form-input" placeholder="Full name">
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Phone Number (for SMS)</label>
+                <input id="delivery-phone" type="tel" class="form-input" placeholder="+263771234567">
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Delivery Notes (optional)</label>
+                <textarea id="delivery-notes" class="form-textarea" rows="2" placeholder="Gate colour, landmark..."></textarea>
+              </div>
+
+              <!-- Map for coordinate picking -->
+              <div class="form-group">
+                <label class="form-label">📍 Pin Delivery Location (click map)</label>
+                <div id="order-map" class="map-container"></div>
+                <p class="text-sm text-muted mt-1" id="coords-display">Click the map to set coordinates</p>
+              </div>
+
+              <button class="btn btn-teal btn-full" onclick="submitOrder()" id="submit-btn">
+                <i data-feather="send"></i> Place Order
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── SECTION: Track Delivery ─────────────────────────────────────── -->
+      <section id="section-track" class="hidden">
+        <div class="page-header">
+          <h2>Track Your Delivery</h2>
+          <p>Live status updates from your last order.</p>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 320px;gap:20px">
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title" id="track-order-id">Order #-</span>
+              <span id="track-status-badge" class="badge badge-gray">-</span>
+            </div>
+            <div id="track-map" class="map-container" style="margin-bottom:20px"></div>
+            <div id="customer-pin-section" class="hidden" style="text-align:center;padding:16px;background:var(--gray-100);border-radius:var(--radius-md)">
+              <p style="margin-bottom:8px;font-weight:600">🔑 Your Retrieval PIN</p>
+              <div id="customer-pin-display" class="pin-box">-</div>
+              <p class="text-sm text-muted mt-2">Enter this on the yard-side keypad to collect your parcel.</p>
+            </div>
+          </div>
+
+          <!-- Status Timeline -->
+          <div class="card">
+            <div class="card-header"><span class="card-title">Delivery Progress</span></div>
+            <div class="timeline" id="status-timeline">
+              <!-- Rendered by JS -->
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── SECTION: Order History ──────────────────────────────────────── -->
+      <section id="section-history" class="hidden">
+        <div class="page-header">
+          <h2>Order History</h2>
+          <p>All your past and active deliveries.</p>
+        </div>
+        <div class="card">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Order ID</th><th>Items</th><th>Total</th>
+                  <th>Status</th><th>Placed</th><th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="history-tbody">
+                <tr><td colspan="6" class="text-center text-muted">Loading...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── SECTION: Notifications ──────────────────────────────────────── -->
+      <section id="section-notifications" class="hidden">
+        <div class="page-header">
+          <h2>Notifications</h2>
+          <p>Real-time delivery updates and alerts.</p>
+        </div>
+        <div class="card">
+          <div class="notif-feed" id="notif-feed">
+            <p class="text-muted text-sm">No notifications yet.</p>
+          </div>
+        </div>
+      </section>
+
+    </div><!-- /main-content -->
+  </div><!-- /main -->
+</div><!-- /dashboard -->
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<!-- Firebase & Dashboard Logic -->
+<script type="module" src="customer.js"></script>
+
+<script>
+  // Init feather icons after DOM ready
+  document.addEventListener('DOMContentLoaded', () => feather.replace());
+</script>
+</body>
+</html>

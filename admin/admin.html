@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SmartDelivery - Admin Dashboard</title>
+  <link rel="stylesheet" href="../shared/style.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/feather-icons/dist/feather.min.js"></script>
+</head>
+<body>
+
+<!-- Login -->
+<div id="login-screen" class="login-page">
+  <div class="login-card">
+    <div class="login-logo">
+      <div style="font-size:42px">🛡️</div>
+      <h1>SmartDelivery</h1>
+      <p>Admin Dashboard</p>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Admin Username</label>
+      <input id="admin-user" type="text" class="form-input" placeholder="admin">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Password</label>
+      <input id="admin-pass" type="password" class="form-input" placeholder="••••••">
+    </div>
+    <button class="btn btn-primary btn-full" onclick="handleAdminLogin()">Sign In</button>
+    <p class="text-center text-sm text-muted mt-3">Demo: username <b>admin</b> / password <b>admin123</b></p>
+  </div>
+</div>
+
+<!-- Main Dashboard -->
+<div id="dashboard" class="page-grid hidden">
+
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div style="font-size:28px">🛡️</div>
+      <div>
+        <div class="logo-text">SmartDelivery</div>
+        <div class="logo-sub">Admin Dashboard</div>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Operations</div>
+      <a class="nav-link active" onclick="showSection('overview')">
+        <i data-feather="grid"></i> Overview
+      </a>
+      <a class="nav-link" onclick="showSection('orders')">
+        <i data-feather="package"></i> Pending Orders
+        <span id="pending-count-badge" class="badge badge-amber hidden" style="margin-left:auto">0</span>
+      </a>
+      <a class="nav-link" onclick="showSection('bikers')">
+        <i data-feather="users"></i> Biker Roster
+      </a>
+      <a class="nav-link" onclick="showSection('map')">
+        <i data-feather="map"></i> Live Map
+      </a>
+      <a class="nav-link" onclick="showSection('history')">
+        <i data-feather="archive"></i> Delivery History
+      </a>
+      <a class="nav-link" onclick="showSection('alerts')">
+        <i data-feather="alert-triangle"></i> Security Alerts
+        <span id="breach-badge" class="badge badge-red hidden" style="margin-left:auto">!</span>
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <div style="font-weight:600;color:#fff;margin-bottom:4px">Administrator</div>
+      <button class="btn btn-sm btn-danger mt-2 btn-full" onclick="logout()">Sign Out</button>
+    </div>
+  </aside>
+
+  <div>
+    <div class="topbar">
+      <span class="topbar-title" id="section-title">Overview</span>
+      <div class="topbar-actions">
+        <span id="locker-pill" class="badge badge-gray">Locker: -</span>
+        <span id="locker-weight-pill" class="badge badge-gray">Weight: -g</span>
+      </div>
+    </div>
+
+    <div class="main-content">
+
+      <!-- Overview -->
+      <section id="section-overview">
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon amber">📦</div>
+            <div><div class="stat-value" id="stat-pending">0</div><div class="stat-label">Pending Orders</div></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon navy">🛵</div>
+            <div><div class="stat-value" id="stat-active">0</div><div class="stat-label">Active Deliveries</div></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon teal">✅</div>
+            <div><div class="stat-value" id="stat-delivered">0</div><div class="stat-label">Delivered Today</div></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon green">👤</div>
+            <div><div class="stat-value" id="stat-bikers">0</div><div class="stat-label">Available Bikers</div></div>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+          <div class="card">
+            <div class="card-header"><span class="card-title">🔴 Pending Orders</span></div>
+            <div id="overview-pending-list"><p class="text-muted text-sm">No pending orders.</p></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><span class="card-title">🟢 Recent Activity</span></div>
+            <div id="overview-activity"><p class="text-muted text-sm">No recent activity.</p></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Pending Orders -->
+      <section id="section-orders" class="hidden">
+        <div class="page-header"><h2>Pending Orders</h2><p>Assign bikers to new orders.</p></div>
+        <div id="orders-list">
+          <p class="text-muted">No pending orders.</p>
+        </div>
+      </section>
+
+      <!-- Bikers -->
+      <section id="section-bikers" class="hidden">
+        <div class="page-header"><h2>Biker Roster</h2><p>All registered delivery agents.</p></div>
+        <div class="card">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Name</th><th>Phone</th><th>Status</th><th>Location</th><th>Active Order</th></tr>
+              </thead>
+              <tbody id="bikers-tbody">
+                <tr><td colspan="5" class="text-center text-muted">Loading...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- Live Map -->
+      <section id="section-map" class="hidden">
+        <div class="page-header"><h2>Live Delivery Map</h2><p>All biker positions and active deliveries.</p></div>
+        <div class="card" style="padding:0;overflow:hidden">
+          <div id="admin-map" style="height:500px"></div>
+        </div>
+      </section>
+
+      <!-- History -->
+      <section id="section-history" class="hidden">
+        <div class="page-header"><h2>Delivery History</h2><p>All completed orders.</p></div>
+        <div class="card">
+          <div style="margin-bottom:14px">
+            <input id="history-search" type="text" class="form-input" placeholder="Search by customer, status, order ID…" oninput="filterHistory()">
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Order ID</th><th>Customer</th><th>Biker</th><th>Status</th><th>Placed</th><th>Delivered</th></tr>
+              </thead>
+              <tbody id="history-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- Alerts -->
+      <section id="section-alerts" class="hidden">
+        <div class="page-header"><h2>Security Alerts</h2><p>Breach attempts and locker events.</p></div>
+        <div class="card">
+          <div id="alerts-feed" class="notif-feed">
+            <p class="text-muted text-sm">No alerts logged.</p>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</div>
+
+<!-- Assign Biker Modal -->
+<div id="assign-modal" class="modal-backdrop hidden">
+  <div class="modal">
+    <button class="modal-close" onclick="closeAssignModal()">✕</button>
+    <div class="modal-title">Assign Biker</div>
+    <div class="modal-sub" id="assign-order-summary">Order details</div>
+
+    <div class="form-group">
+      <label class="form-label">Select Biker</label>
+      <select id="biker-select" class="form-select">
+        <option value="">— Choose available biker —</option>
+      </select>
+    </div>
+
+    <div id="assign-pin-preview" class="hidden" style="background:var(--gray-100);border-radius:var(--radius-sm);padding:16px;margin-top:12px">
+      <p style="font-size:13px;font-weight:600;margin-bottom:8px">Generated PINs (auto)</p>
+      <div class="flex gap-3">
+        <div style="flex:1">
+          <p class="text-sm text-muted">Biker Box PIN</p>
+          <div id="preview-biker-pin" style="font-size:22px;font-weight:700;color:var(--navy);font-family:monospace;letter-spacing:6px">—</div>
+        </div>
+        <div style="flex:1">
+          <p class="text-sm text-muted">Customer Retrieval PIN</p>
+          <div id="preview-customer-pin" style="font-size:22px;font-weight:700;color:var(--teal);font-family:monospace;letter-spacing:6px">—</div>
+        </div>
+      </div>
+      <p class="text-sm text-muted mt-2">PINs are pushed to Firebase and sent to each party automatically.</p>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeAssignModal()">Cancel</button>
+      <button class="btn btn-teal" onclick="confirmAssign()" id="confirm-assign-btn" disabled>Generate PINs & Assign</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script type="module" src="admin.js"></script>
+<script>document.addEventListener('DOMContentLoaded', () => feather.replace());</script>
+</body>
+</html>

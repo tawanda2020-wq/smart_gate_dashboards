@@ -1,0 +1,85 @@
+{
+  "rules": {
+    // =========================================================================
+    // Smart Gate Delivery System - Firebase Realtime Database Security Rules
+    //
+    // Rule philosophy for prototype:
+    //   - /orders:       Any authenticated session can read; write is allowed
+    //                    for order creation (customer) and status updates (admin/biker).
+    //                    *In production, we tighten write rules/role using custom tokens.
+    //   - /bikers:       Read by any authenticated session; write only by admin
+    //                    (enforced at app layer in prototype; Firebase rules in production).
+    //   - /locker:       Read by anyone (ESP32 reads without auth); write by ESP32
+    //                    which uses the legacy database secret.
+    //   - /deliveryLogs: Write by any authenticated session; read by admin only.
+    //
+    // *For production, to use Firebase Custom Auth tokens to encode role claims
+    // & to replace "auth != null" with "auth.token.role === 'admin'" etc.
+    // =========================================================================
+
+    ".read":  false,
+    ".write": false,
+
+    "orders": {
+      // Any signed-in session can read all orders
+      ".read": "auth != null",
+
+      "$orderId": {
+        // Customers can create new orders (write to a new key)
+        ".write": "auth != null",
+        ".validate": "newData.hasChildren(['customerId','customerPhone','customerName','items','deliveryAddress','gpsLat','gpsLon','status','timestamp'])",
+
+        "status": {
+          // Status must be one of the valid enum values
+          ".validate": "newData.val() === 'PENDING' || newData.val() === 'ASSIGNED' || newData.val() === 'ENROUTE' || newData.val() === 'ARRIVED' || newData.val() === 'DELIVERED' || newData.val() === 'COLLECTED'"
+        },
+
+        "gpsLat":  { ".validate": "newData.isNumber()" },
+        "gpsLon":  { ".validate": "newData.isNumber()" },
+        "timestamp":{ ".validate": "newData.isNumber()" }
+      }
+    },
+
+    "bikers": {
+      // All authenticated sessions can read biker list (for map, assignment)
+      ".read": "auth != null",
+
+      "$bikerId": {
+        // In prototype: any authenticated session can update biker state.
+        // *In production: restrict to the matching biker's custom token or admin token.
+        ".write": "auth != null",
+        ".validate": "newData.hasChildren(['bikerId','name','phone','status'])",
+
+        "status": {
+          ".validate": "newData.val() === 'AVAILABLE' || newData.val() === 'ENROUTE' || newData.val() === 'BUSY'"
+        },
+        "currentLat": { ".validate": "newData.isNumber() || newData.val() === null" },
+        "currentLon": { ".validate": "newData.isNumber() || newData.val() === null" }
+      }
+    },
+
+    "locker": {
+      // ESP32 reads and writes locker state using the legacy database secret,
+      // which bypasses these rules. Dashboards read but do not write directly.
+      ".read":  "auth != null",
+      ".write": "auth != null",
+
+      "status":         { ".validate": "newData.isString()" },
+      "weightGrams":    { ".validate": "newData.isNumber()" },
+      "breachAttempts": { ".validate": "newData.isNumber()" },
+      "lastUpdated":    { ".validate": "newData.isNumber()" }
+    },
+
+    "deliveryLogs": {
+      // Admin can read all logs; any authenticated session can write (ESP32 logs breaches)
+      ".read":  "auth != null",
+      ".write": "auth != null",
+
+      "$orderId": {
+        "$logEntry": {
+          ".validate": "newData.hasChildren(['orderId'])"
+        }
+      }
+    }
+  }
+}

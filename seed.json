@@ -1,0 +1,10 @@
+{
+  "bikers": {
+    "biker001": { "bikerId":"biker001","name":"Tendai Moyo","phone":"+263771111111","status":"AVAILABLE","currentLat":-17.8292,"currentLon":31.0522,"assignedOrderId":null,"deliveryPin":null },
+    "biker002": { "bikerId":"biker002","name":"Chipo Ndlovu","phone":"+263772222222","status":"AVAILABLE","currentLat":-17.8150,"currentLon":31.0410,"assignedOrderId":null,"deliveryPin":null },
+    "biker003": { "bikerId":"biker003","name":"Farai Sibanda","phone":"+263773333333","status":"AVAILABLE","currentLat":-17.8380,"currentLon":31.0280,"assignedOrderId":null,"deliveryPin":null },
+    "biker004": { "bikerId":"biker004","name":"Rudo Mhlanga","phone":"+263774444444","status":"AVAILABLE","currentLat":-17.8100,"currentLon":31.0600,"assignedOrderId":null,"deliveryPin":null },
+    "biker005": { "bikerId":"biker005","name":"Humphrey T Masheleni","phone":"+263717990359","status":"AVAILABLE","currentLat":-17.8450,"currentLon":31.0350,"assignedOrderId":null,"deliveryPin":null }
+  },
+  "locker": { "status":"IDLE","lastUpdated":0,"breachAttempts":0,"weightGrams":0,"gpsLat":-17.8252,"gpsLon":31.0335 }
+}

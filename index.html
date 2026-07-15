@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SmartDelivery - Select Role</title>
+  <link rel="stylesheet" href="shared/style.css">
+  <style>
+    body {
+      min-height: 100vh;
+      background: linear-gradient(135deg, var(--dark) 0%, var(--navy) 60%, var(--teal) 100%);
+      display: flex; align-items: center; justify-content: center; padding: 20px;
+    }
+    .role-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px;
+      max-width: 860px; width: 100%;
+    }
+    .role-card {
+      background: rgba(255,255,255,0.97); border-radius: 18px;
+      padding: 40px 28px; text-align: center; cursor: pointer;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.25);
+      transition: transform 0.2s, box-shadow 0.2s;
+      text-decoration: none; color: inherit;
+    }
+    .role-card:hover { transform: translateY(-6px); box-shadow: 0 16px 48px rgba(0,0,0,0.3); }
+    .role-icon { font-size: 56px; margin-bottom: 16px; }
+    .role-title { font-size: 20px; font-weight: 700; color: var(--dark); margin-bottom: 8px; }
+    .role-desc  { font-size: 13px; color: var(--gray-600); line-height: 1.6; }
+    .role-btn   {
+      display: inline-block; margin-top: 20px; padding: 10px 24px;
+      border-radius: 8px; font-size: 13px; font-weight: 600; color: #fff;
+    }
+    .btn-customer { background: var(--teal); }
+    .btn-admin    { background: var(--navy); }
+    .btn-biker    { background: #7c3aed; }
+    .site-header  { text-align: center; color: #fff; margin-bottom: 36px; }
+    .site-header h1 { font-size: 36px; margin-bottom: 6px; }
+    .site-header p  { font-size: 15px; opacity: 0.8; }
+    @media(max-width:768px) { .role-grid { grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+  <div style="width:100%;max-width:900px">
+    <div class="site-header">
+      <div style="font-size:52px">📦</div> 
+      <h1 style="color:  #e8edf3;">Smart Delivery System</h1>
+      <p style="color:  #e8edf3;">Smart Gate-Mounted Package Delivery System</p>
+    </div>
+    <div class="role-grid">
+      <a href="customer/customer.html" class="role-card">
+        <div class="role-icon">🏠</div>
+        <div class="role-title">Customer</div>
+        <div class="role-desc">Place orders, track deliveries in real time, and collect packages from your gate locker.</div>
+        <div class="role-btn btn-customer">Open Customer Portal →</div>
+      </a>
+      <a href="admin/admin.html" class="role-card">
+        <div class="role-icon">🛡️</div>
+        <div class="role-title">Administrator</div>
+        <div class="role-desc">Manage orders, assign delivery bikers, generate access PINs, and monitor the system.</div>
+        <div class="role-btn btn-admin">Open Admin Dashboard →</div>
+      </a>
+      <a href="biker/biker.html" class="role-card">
+        <div class="role-icon">🛵</div>
+        <div class="role-title">Delivery Biker</div>
+        <div class="role-desc">Accept delivery jobs, navigate to locations, enter box PINs, and complete deliveries.</div>
+        <div class="role-btn btn-biker">Open Biker Portal →</div>
+      </a>
+    </div>
+  </div>
+</body>
+</html>

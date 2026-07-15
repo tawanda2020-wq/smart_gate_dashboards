@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SmartDelivery - Biker Dashboard</title>
+  <link rel="stylesheet" href="../shared/style.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/feather-icons/dist/feather.min.js"></script>
+  <style>
+    /* Biker-specific: big action buttons for mobile use while riding */
+    .action-btn-big {
+      width: 100%; padding: 18px; font-size: 16px; font-weight: 700;
+      border-radius: var(--radius-md); border: none; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      transition: var(--transition);
+    }
+    .action-btn-enroute  { background: #7c3aed; color: #fff; }
+    .action-btn-arrived  { background: var(--navy); color: #fff; }
+    .action-btn-done     { background: var(--teal); color: #fff; }
+    .action-btn-big:hover { filter: brightness(1.1); }
+    .action-btn-big:disabled { opacity:0.4; cursor:not-allowed; }
+
+    /* Full-screen new job alert */
+    .job-alert-overlay {
+      position: fixed; inset: 0;
+      background: rgba(27,58,107,0.97);
+      z-index: 2000;
+      display: flex; align-items: center; justify-content: center;
+      padding: 20px;
+    }
+    .job-alert-card {
+      background: #fff; border-radius: var(--radius-lg);
+      padding: 36px; max-width: 420px; width: 100%; text-align: center;
+    }
+    .job-alert-card h2 { color: var(--navy); margin-bottom: 8px; }
+  </style>
+</head>
+<body>
+
+<!-- Login -->
+<div id="login-screen" class="login-page">
+  <div class="login-card">
+    <div class="login-logo">
+      <div style="font-size:42px">🛵</div>
+      <h1>SmartGate</h1>
+      <p>Biker Portal</p>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Biker ID</label>
+      <input id="biker-id-input" type="text" class="form-input" placeholder="e.g. biker001">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Password</label>
+      <input id="biker-pass" type="password" class="form-input" placeholder="••••••">
+    </div>
+    <button class="btn btn-primary btn-full" onclick="handleBikerLogin()">Sign In</button>
+    <p class="text-center text-sm text-muted mt-3">Demo: ID <b>biker001</b> / password <b>biker123</b></p>
+  </div>
+</div>
+
+<!-- New Job Alert Overlay -->
+<div id="job-alert" class="job-alert-overlay hidden">
+  <div class="job-alert-card">
+    <div style="font-size:52px;margin-bottom:12px">🔔</div>
+    <h2>New Delivery!</h2>
+    <p id="job-alert-summary" style="margin:12px 0 20px;color:var(--gray-600)">Loading order details...</p>
+    <div id="job-alert-items" style="background:var(--gray-100);border-radius:var(--radius-sm);padding:14px;margin-bottom:20px;text-align:left;font-size:13px"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <button class="btn btn-outline" onclick="declineJob()">Decline</button>
+      <button class="btn btn-teal" onclick="acceptJob()">✅ Accept Job</button>
+    </div>
+  </div>
+</div>
+
+<!-- Main Dashboard -->
+<div id="dashboard" class="page-grid hidden">
+
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div style="font-size:28px">🛵</div>
+      <div>
+        <div class="logo-text">SmartGate</div>
+        <div class="logo-sub" id="biker-name-sidebar">Biker Portal</div>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Delivery</div>
+      <a class="nav-link active" onclick="showSection('active')">
+        <i data-feather="navigation"></i> Active Delivery
+      </a>
+      <a class="nav-link" onclick="showSection('map')">
+        <i data-feather="map"></i> My Map
+      </a>
+      <a class="nav-link" onclick="showSection('history')">
+        <i data-feather="clock"></i> Trip History
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <div id="biker-status-sidebar" class="badge badge-green" style="margin-bottom:8px">AVAILABLE</div>
+      <button class="btn btn-sm btn-danger btn-full mt-2" onclick="logout()">Sign Out</button>
+    </div>
+  </aside>
+
+  <div>
+    <div class="topbar">
+      <span class="topbar-title" id="section-title">Active Delivery</span>
+      <div class="topbar-actions">
+        <span id="delivery-status-pill" class="badge badge-gray">No active delivery</span>
+      </div>
+    </div>
+
+    <div class="main-content">
+
+      <!-- Active Delivery -->
+      <section id="section-active">
+
+        <!-- No job state -->
+        <div id="no-job-state" style="text-align:center;padding:60px 20px">
+          <div style="font-size:64px;margin-bottom:16px">🛵</div>
+          <h2 style="color:var(--gray-400)">No Active Delivery</h2>
+          <p class="text-muted">You will be notified when a new job is assigned to you.</p>
+        </div>
+
+        <!-- Active job state -->
+        <div id="active-job-state" class="hidden">
+          <div style="display:grid;grid-template-columns:1fr 360px;gap:20px">
+
+            <!-- Map & Navigation -->
+            <div>
+              <div class="card" style="padding:0;overflow:hidden;margin-bottom:20px">
+                <div id="biker-map" style="height:380px"></div>
+              </div>
+              <div class="card">
+                <div class="card-header"><span class="card-title">📦 Order Details</span></div>
+                <div id="active-order-details"></div>
+              </div>
+            </div>
+
+            <!-- Action Panel -->
+            <div>
+              <!-- PIN Card (hidden until en-route confirmed) -->
+              <div id="pin-card" class="card hidden" style="text-align:center;border:2px solid var(--teal)">
+                <div style="font-size:13px;font-weight:600;color:var(--gray-600);margin-bottom:8px">🔑 Your Box PIN</div>
+                <div id="biker-pin-display" class="pin-box" style="justify-content:center;font-size:32px">—</div>
+                <button id="pin-toggle-btn" class="btn btn-sm btn-outline mt-2" onclick="togglePinVisibility()">
+                  👁 Show PIN
+                </button>
+                <p class="text-sm text-muted mt-2">Enter this on the outer keypad at the gate.</p>
+              </div>
+
+              <!-- Status Action Card -->
+              <div class="card">
+                <div class="card-header"><span class="card-title">Delivery Actions</span></div>
+                <div style="display:flex;flex-direction:column;gap:12px">
+                  <button id="btn-enroute" class="action-btn-big action-btn-enroute" onclick="confirmEnRoute()" disabled>
+                    🛵 Confirm En Route
+                  </button>
+                  <button id="btn-arrived" class="action-btn-big action-btn-arrived" onclick="confirmArrived()" disabled>
+                    🏠 Confirm Arrived
+                  </button>
+                  <button id="btn-done" class="action-btn-big action-btn-done" onclick="confirmDeliveryDone()" disabled>
+                    ✅ Mark Delivered
+                  </button>
+                </div>
+                <div id="action-hint" class="text-sm text-muted mt-3" style="text-align:center">
+                  Accept the job to begin
+                </div>
+              </div>
+
+              <!-- Delivery Status Timeline -->
+              <div class="card">
+                <div class="card-header"><span class="card-title">Progress</span></div>
+                <div class="timeline" id="biker-timeline"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- My Map -->
+      <section id="section-map" class="hidden">
+        <div class="page-header"><h2>My Location</h2><p>Your current position and nearby bikers.</p></div>
+        <div class="card" style="padding:0;overflow:hidden">
+          <div id="all-bikers-map" style="height:480px"></div>
+        </div>
+      </section>
+
+      <!-- Trip History -->
+      <section id="section-history" class="hidden">
+        <div class="page-header"><h2>Trip History</h2><p>Your completed deliveries.</p></div>
+        <div class="card">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Order ID</th><th>Customer</th><th>Address</th><th>Status</th><th>Delivered</th></tr>
+              </thead>
+              <tbody id="trip-history-tbody">
+                <tr><td colspan="5" class="text-center text-muted">No trips yet.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script type="module" src="biker.js"></script>
+<script>document.addEventListener('DOMContentLoaded', () => feather.replace());</script>
+</body>
+</html>

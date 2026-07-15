@@ -1,0 +1,8 @@
+# .nojekyll
+# This empty file tells GitHub Pages NOT to process the site through Jekyll.
+# Required because our folder names (shared/, admin/, etc.) and JS module
+# imports would otherwise be mangled by Jekyll's build process.
+#
+# HOW TO USE:
+#   This file must exist at the ROOT of your GitHub Pages branch (gh-pages or main).
+#   It has no content - its mere presence disables Jekyll processing.
