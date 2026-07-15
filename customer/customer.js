@@ -468,16 +468,19 @@ function listenBikerPosition(bikerId, destLat, destLon) {
 // Status Timeline
 // ---------------------------------------------------------------------------
 const TIMELINE_STEPS = [
-  { status: "PENDING", label: "Order Placed", icon: "🛒" },
-  { status: "ASSIGNED", label: "Biker Assigned", icon: "👤" },
-  { status: "ENROUTE", label: "Biker En Route", icon: "🛵" },
-  { status: "ARRIVED", label: "Arrived at Gate", icon: "🏠" },
-  { status: "DELIVERED", label: "Package Delivered", icon: "📦" },
-  { status: "COLLECTED", label: "Package Collected ✓", icon: "✅" },
+  { status: 'PENDING',            label: 'Order Placed',       icon: '🛒' },
+  { status: 'PENDING_ACCEPTANCE', label: 'Finding Biker',      icon: '🔍' },
+  { status: 'ASSIGNED',           label: 'Biker Confirmed',    icon: '👤' },
+  { status: 'ENROUTE',            label: 'Biker En Route',     icon: '🛵' },
+  { status: 'ARRIVED',            label: 'Arrived at Gate',    icon: '🏠' },
+  { status: 'DELIVERED',          label: 'Package Delivered',  icon: '📦' },
+  { status: 'COLLECTED',          label: 'Package Collected ✓',icon: '✅' },
 ];
 
 function renderTimeline(currentStatus) {
-  const idx = TIMELINE_STEPS.findIndex((s) => s.status === currentStatus);
+  // If biker declined, show customer as still at PENDING (finding new biker)
+  const displayStatus = currentStatus === 'DECLINED' ? 'PENDING' : currentStatus;
+  const idx = TIMELINE_STEPS.findIndex(s => s.status === displayStatus);
   document.getElementById("status-timeline").innerHTML = TIMELINE_STEPS.map(
     (s, i) => `
     <div class="timeline-step">
