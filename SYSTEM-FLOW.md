@@ -32,3 +32,15 @@ Action                             | Handled in
 *ESP32 logs breach attempts         - wifi_firebase.cpp → firebase_log_breach()
 *ESP32 pushes COLLECTED on pickup   - state_machine.cpp → handle_pickup_confirmed()
 *Dashboards react in real-time      - Firebase onValue() listeners in all 3 dashboard JS files
+
+
+
+// STATE: DOOR_OPEN_BIKER
+// Biker door is open:
+//   - Biker taps "Mark Delivered" on the dashboard (polled via Firebase), OR
+//   - Biker presses # or * on the physical keypad as an offline fallback.
+// Either trigger closes the door and runs a 5s IR presence check.
+// If neither happens within DOOR_CLOSE_TIMEOUT_MS (15s), the door
+// auto-closes and the biker must re-enter their PIN to try again.
+// After MAX_DOOR_TIMEOUT_RETRIES consecutive timeouts, the delivery is
+// flagged for admin and cancelled instead of retrying indefinitely.

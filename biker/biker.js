@@ -236,13 +236,54 @@ function listenForAssignment() {
       const order = orders[activeOrderId];
       activeOrder = order;
       updateDeliveryStatusUI(order.status);
+
+      // The box itself sets DELIVERED only after it has closed the door and
+      // run its 5s parcel check - this is the real "job done" signal, not
+      // the dashboard button click.
       if (order.status === "DELIVERED") {
-        showToast("✅ Parcel confirmed delivered by locker!", "success", 8000);
-        document.getElementById("btn-done").disabled = false;
+        showToast("✅ Delivery confirmed by the locker!", "success", 8000);
+        freeUpBikerAndResetUI();
+      } else if (order.status === "FLAGGED_NEEDS_ADMIN") {
+        showToast(
+          "⚠️ Delivery could not be completed automatically. Contact admin/customer directly.",
+          "error",
+          10000,
+        );
+        freeUpBikerAndResetUI();
       }
     }
     loadTripHistory();
   });
+}
+
+// ---------------------------------------------------------------------------
+// Free the biker up for new jobs and reset the active-job UI. Called once
+// the box confirms the delivery is actually finished (or flagged/cancelled).
+// ---------------------------------------------------------------------------
+async function freeUpBikerAndResetUI() {
+  await update(ref(db, `bikers/${currentBiker.bikerId}`), {
+    status: "AVAILABLE",
+    assignedOrderId: null,
+    deliveryPin: null,
+  });
+
+  setTimeout(() => {
+    document.getElementById("no-job-state").classList.remove("hidden");
+    document.getElementById("active-job-state").classList.add("hidden");
+    document.getElementById("pin-card").classList.add("hidden");
+    document.getElementById("delivery-status-pill").textContent =
+      "No active delivery";
+    activeOrder = null;
+    activeOrderId = null;
+    if (myMarker) {
+      bikerMap.removeLayer(myMarker);
+      myMarker = null;
+    }
+    if (destMarker) {
+      bikerMap.removeLayer(destMarker);
+      destMarker = null;
+    }
+  }, 3000);
 }
 
 // ---------------------------------------------------------------------------
@@ -430,7 +471,7 @@ function updateDeliveryStatusUI(status) {
   // Reset all
   [enRouteBtn, arrivedBtn, doneBtn].forEach((b) => (b.disabled = true));
 
-  if (status === "ASSIGNED") {
+if (status === "ASSIGNED") {
     enRouteBtn.disabled = false;
     hint.textContent = 'Tap "Confirm En Route" when you start riding.';
   } else if (status === "ENROUTE") {
@@ -439,11 +480,18 @@ function updateDeliveryStatusUI(status) {
       'Navigate to the delivery address. Tap "Arrived" when you reach the gate.';
   } else if (status === "ARRIVED") {
     hint.textContent =
-      "Enter the box PIN on the outer keypad. Place the parcel and close the door.";
-  } else if (status === "DELIVERED") {
+      "Enter the box PIN on the outer keypad to open the door.";
+  } else if (status === "BIKER_AUTH_OK") {
     doneBtn.disabled = false;
     hint.textContent =
-      '✅ Parcel confirmed by locker sensor. Tap "Mark Delivered" to complete.';
+      'Door is open. Place the parcel, then tap "Mark Delivered".';
+  } else if (status === "MARK_DELIVERED_REQUESTED") {
+    hint.textContent = "Closing the door and checking the parcel...";
+  } else if (status === "DELIVERED") {
+    hint.textContent = "✅ Delivery confirmed by the locker sensor.";
+  } else if (status === "FLAGGED_NEEDS_ADMIN") {
+    hint.textContent =
+      "⚠️ Could not complete automatically. Contact admin/customer directly.";
   } else if (status === "COLLECTED") {
     hint.textContent =
       "🎉 Delivery complete! Customer has collected the parcel.";
@@ -471,32 +519,15 @@ window.confirmArrived = async function () {
 
 window.confirmDeliveryDone = async function () {
   document.getElementById("btn-done").disabled = true;
-  await update(ref(db, `orders/${activeOrderId}`), { status: "DELIVERED" });
-  await update(ref(db, `bikers/${currentBiker.bikerId}`), {
-    status: "AVAILABLE",
-    assignedOrderId: null,
-    deliveryPin: null,
+  // This does NOT finish the delivery - it just tells the box the biker is
+  // done placing the parcel. The box closes the door, runs its 5s IR check,
+  // and pushes the real "DELIVERED" status itself (handled in the orders
+  // listener above). If the box doesn't pick this up within 15s it will
+  // auto-close and the biker will be asked to re-enter their PIN.
+  await update(ref(db, `orders/${activeOrderId}`), {
+    status: "MARK_DELIVERED_REQUESTED",
   });
-  showToast("🎉 Delivery marked complete!", "success", 6000);
-
-  // Reset UI
-  setTimeout(() => {
-    document.getElementById("no-job-state").classList.remove("hidden");
-    document.getElementById("active-job-state").classList.add("hidden");
-    document.getElementById("pin-card").classList.add("hidden");
-    document.getElementById("delivery-status-pill").textContent =
-      "No active delivery";
-    activeOrder = null;
-    activeOrderId = null;
-    if (myMarker) {
-      bikerMap.removeLayer(myMarker);
-      myMarker = null;
-    }
-    if (destMarker) {
-      bikerMap.removeLayer(destMarker);
-      destMarker = null;
-    }
-  }, 3000);
+  showToast("Sent to locker - closing door and checking parcel...", "info", 5000);
 };
 
 // ---------------------------------------------------------------------------
@@ -523,7 +554,15 @@ const BIKER_STEPS = [
 ];
 
 function renderBikerTimeline(currentStatus) {
-  const idx = BIKER_STEPS.findIndex((s) => s.status === currentStatus);
+  // BIKER_AUTH_OK / MARK_DELIVERED_REQUESTED are intermediate statuses
+  // that sit between ARRIVED and DELIVERED - mapped them onto ARRIVED so the
+  // timeline still shows progress instead of resetting to blank.
+  const normalized =
+    currentStatus === "BIKER_AUTH_OK" ||
+    currentStatus === "MARK_DELIVERED_REQUESTED"
+      ? "ARRIVED"
+      : currentStatus;
+  const idx = BIKER_STEPS.findIndex((s) => s.status === normalized);
   document.getElementById("biker-timeline").innerHTML = BIKER_STEPS.map(
     (s, i) => `
     <div class="timeline-step">
