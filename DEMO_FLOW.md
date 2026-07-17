@@ -1,29 +1,11 @@
-# SmartGate Delivery System — End-to-End Demo Flow
+# SmartGate Delivery System - End-to-End Demo Flow
 
 This document walks through a full delivery cycle on the **current firmware +
 dashboard build**, from order creation to the box being ready for the next
-delivery. It reflects:
+delivery.
 
-- The redesigned biker drop-off flow (dashboard-driven "Mark Delivered", 30s
-  retry window, two-strike admin flag)
-- The redesigned customer pickup flow (dashboard-driven "Confirm Collection",
-  keypad fallback, IR as a bonus signal)
-- The fix so the box only prompts for the biker PIN on `ARRIVED`, not
-  `ENROUTE`
-- A non-blocking WiFi-offline indicator on the customer LCD
-
-> **Known limitation:** the customer **can't yet open** the door on real
-> hardware — the ESP8266 customer-keypad bridge has an unresolved bug and
-> never returns a typed PIN to the ESP32
-> (`[KP/CUST] Timeout waiting for ESP8266 PIN response.` loops indefinitely
-> in the serial log). Everything up to that point (Steps 1–9) is fully
-> working and demo-ready. Steps 10–12 (closing the box after collection) are
-> implemented and ready to test the moment the ESP8266 bug is fixed.
-
----
 
 ## Actors
-
 | Actor       | Interface                                                             |
 |-------------|-----------------------------------------------------------------------|
 | Customer    | Customer web dashboard (order tracking)                               |
@@ -31,31 +13,17 @@ delivery. It reflects:
 | Admin       | Admin web dashboard                                                   |
 | Box (ESP32) | Physical locker — biker-side LCD/keypad/servo, customer-side LCD/keypad/servo, IR sensor, GSM |
 
----
-
-## Pre-demo checklist
-
-- [ ] Box powered on, WiFi credentials in `config.h` match the demo network
-- [ ] Serial monitor open (115200 baud) to narrate what's happening live
-- [ ] Firebase RTDB reachable, an order exists (or will be created) with `status: "ASSIGNED"` and a `boxId` matching `BOX_ID` in `config.h`
-- [ ] Biker is logged into the biker dashboard and has the job assigned
-- [ ] Admin dashboard open on a second screen (optional, good for demo narration)
-- [ ] On small screens, use the hamburger icon (top-left of the topbar) to open the sidebar on any of the three dashboards
-
----
 
 ## Full Flow
-
 ### 1. Order created / assigned
 Order exists in `/orders/{orderId}` with `status: "ASSIGNED"`, a `bikerPinPlain`, `customerPinPlain`, and `customerPhone`. The biker has accepted the job on their dashboard.
-
 - **Biker dashboard:** shows the job card, "Confirm En Route" button active.
 - **Box:** idle, LCDs show "Ready / Awaiting Order". If WiFi is down, the customer LCD periodically flashes "WiFi: OFFLINE / Retrying..." every ~8s without blocking anything else.
 
 ### 2. Biker taps "Confirm En Route"
 - **Dashboard action:** `orders/{id}/status → "ENROUTE"`
 - **Biker dashboard:** PIN card revealed, "Arrived" button active.
-- **Box:** still idle. The box caches the order's PINs/phone in the background as soon as it sees `ASSIGNED` or `ENROUTE`, but **does not** prompt for a PIN yet — that only happens once status reaches `ARRIVED` (see Step 4).
+- **Box:** still idle. The box caches the order's PINs/phone in the background as soon as it sees `ASSIGNED` or `ENROUTE`, but **does not** prompt for a PIN yet - that only happens once status reaches `ARRIVED` (see Step 4).
 
 ### 3. Box picks up the assignment (background)
 Every 3s the box polls `/orders` for anything matching its `BOX_ID` with status `ASSIGNED`, `ENROUTE`, or `ARRIVED`, so it can catch up even if it was offline earlier. Only `ARRIVED` triggers the PIN prompt — `ASSIGNED`/`ENROUTE` are silently cached.
@@ -128,7 +96,7 @@ Every 3s the box polls `/orders` for anything matching its `BOX_ID` with status 
 
 ---
 
-## Alternate path A — biker doesn't confirm drop-off in time
+## Alternate path A - biker doesn't confirm drop-off in time
 
 If neither "Mark Delivered" nor the `#`/`*` keypad fallback fires within **30 seconds** of the biker door opening:
 
