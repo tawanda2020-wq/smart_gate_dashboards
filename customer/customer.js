@@ -8,6 +8,7 @@ import {
   ref,
   push,
   set,
+  update,
   onValue,
   query,
   orderByChild,
@@ -277,7 +278,14 @@ function initOrderMap() {
 window.submitOrder = async function () {
   const address = document.getElementById("delivery-address").value.trim();
   const name = document.getElementById("delivery-name").value.trim();
-  const phone = document.getElementById("delivery-phone").value.trim();
+  let phone = document.getElementById("delivery-phone").value.trim();
+  // This field is pre-filled from the normalised login phone, but the
+  // customer can still hand-edit it - re-normalise to +263XXXXXXXXX so the
+  // GSM module always has a valid international number to SMS.
+  if (phone && !phone.startsWith("+")) {
+    const digitsOnly = phone.replace(/\D/g, "");
+    phone = "+263" + digitsOnly.slice(-9);
+  }
   const notes = document.getElementById("delivery-notes").value.trim();
   const items = Object.entries(cart).map(([pid, qty]) => {
     const p = PRODUCTS.find((x) => x.id === pid);
@@ -426,12 +434,15 @@ function updateTrackingUI(order) {
     trackMap.setView([order.gpsLat, order.gpsLon], 14);
   }
 
-  // Show customer retrieval PIN once DELIVERED
+// Show customer retrieval PIN once DELIVERED
   if (order.status === "DELIVERED" && order.customerPinPlain) {
     const pinSection = document.getElementById("customer-pin-section");
     pinSection.classList.remove("hidden");
     document.getElementById("customer-pin-display").textContent =
       order.customerPinPlain.split("").join(" ");
+    const btn = document.getElementById("btn-confirm-collection");
+    btn.disabled = true;
+    btn.textContent = "Enter PIN on keypad first";
     if (!notifications.some((n) => n.msg.includes("PIN"))) {
       addNotification(
         "🔑 Your retrieval PIN is ready. Check the Track page!",
@@ -443,6 +454,22 @@ function updateTrackingUI(order) {
         8000,
       );
     }
+  } else if (order.status === "CUSTOMER_AUTH_OK") {
+    // Box confirms the door is actually open - now it's safe to let the
+    // customer trigger the close.
+    document.getElementById("customer-pin-section").classList.remove("hidden");
+    const btn = document.getElementById("btn-confirm-collection");
+    btn.disabled = false;
+    btn.textContent = "✅ Confirm Collection";
+  } else if (order.status === "COLLECTION_REQUESTED") {
+    const btn = document.getElementById("btn-confirm-collection");
+    btn.disabled = true;
+    btn.textContent = "Closing locker...";
+  } else if (order.status === "COLLECTED") {
+    // Delivery fully complete - clear the PIN and hide the section so the
+    // page is ready for the next order.
+    document.getElementById("customer-pin-section").classList.add("hidden");
+    document.getElementById("customer-pin-display").textContent = "-";
   }
 
   // Show biker position on map if ENROUTE/ARRIVED
@@ -450,6 +477,21 @@ function updateTrackingUI(order) {
     listenBikerPosition(order.assignedBikerId, order.gpsLat, order.gpsLon);
   }
 }
+
+// ---------------------------------------------------------------------------
+// Confirm Collection - tells the box the customer has taken the parcel
+// ---------------------------------------------------------------------------
+window.confirmCollection = async function () {
+  document.getElementById("btn-confirm-collection").disabled = true;
+  // This does NOT finish the pickup itself - it tells the box to close the
+  // door. The box pushes the real "COLLECTED" status once it has done so
+  // (handled in the orders listener, same pattern as the biker's Mark
+  // Delivered flow).
+  await update(ref(db, `orders/${activeOrderId}`), {
+    status: "COLLECTION_REQUESTED",
+  });
+  showToast("Confirming with locker...", "info", 4000);
+};
 
 function listenBikerPosition(bikerId, destLat, destLon) {
   onValue(ref(db, `bikers/${bikerId}`), (snap) => {
@@ -479,7 +521,12 @@ const TIMELINE_STEPS = [
 
 function renderTimeline(currentStatus) {
   // If biker declined, show customer as still at PENDING (finding new biker)
-  const displayStatus = currentStatus === 'DECLINED' ? 'PENDING' : currentStatus;
+  // CUSTOMER_AUTH_OK / COLLECTION_REQUESTED sit between DELIVERED and
+  // COLLECTED - map them onto DELIVERED so the timeline doesn't blank out.
+  const displayStatus =
+    currentStatus === 'DECLINED' ? 'PENDING' :
+    (currentStatus === 'CUSTOMER_AUTH_OK' || currentStatus === 'COLLECTION_REQUESTED') ? 'DELIVERED' :
+    currentStatus;
   const idx = TIMELINE_STEPS.findIndex(s => s.status === displayStatus);
   document.getElementById("status-timeline").innerHTML = TIMELINE_STEPS.map(
     (s, i) => `

@@ -87,6 +87,9 @@
     <!-- Main -->
     <div>
       <div class="topbar">
+        <button class="sidebar-toggle" onclick="toggleSidebar()" aria-label="Toggle menu">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
         <span class="topbar-title" id="section-title">Place Order</span>
         <div class="topbar-actions">
           <span id="locker-status-pill" class="badge badge-gray">Locker: -</span>
@@ -201,6 +204,9 @@
                 <p style="margin-bottom:8px;font-weight:600">🔑 Your Retrieval PIN</p>
                 <div id="customer-pin-display" class="pin-box">-</div>
                 <p class="text-sm text-muted mt-2">Enter this on the yard-side keypad to collect your parcel.</p>
+                <button id="btn-confirm-collection" class="btn btn-primary w-full mt-3" disabled onclick="confirmCollection()">
+                  Enter PIN on keypad first
+                </button>
               </div>
             </div>
 
@@ -270,6 +276,14 @@
     // Init feather icons after DOM ready
     document.addEventListener('DOMContentLoaded', () => feather.replace());
   </script>
+  
+<div class="sidebar-backdrop" onclick="toggleSidebar()"></div>
+<script>
+  function toggleSidebar() {
+    document.querySelector('.sidebar').classList.toggle('sidebar-open');
+    document.querySelector('.sidebar-backdrop').classList.toggle('active');
+  }
+</script>
 </body>
 
 </html>

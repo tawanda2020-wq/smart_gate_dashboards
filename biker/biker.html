@@ -107,6 +107,9 @@
 
   <div>
     <div class="topbar">
+      <button class="sidebar-toggle" onclick="toggleSidebar()" aria-label="Toggle menu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
       <span class="topbar-title" id="section-title">Active Delivery</span>
       <div class="topbar-actions">
         <span id="delivery-status-pill" class="badge badge-gray">No active delivery</span>
@@ -213,5 +216,13 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script type="module" src="biker.js"></script>
 <script>document.addEventListener('DOMContentLoaded', () => feather.replace());</script>
+
+<div class="sidebar-backdrop" onclick="toggleSidebar()"></div>
+<script>
+  function toggleSidebar() {
+    document.querySelector('.sidebar').classList.toggle('sidebar-open');
+    document.querySelector('.sidebar-backdrop').classList.toggle('active');
+  }
+</script>
 </body>
 </html>
