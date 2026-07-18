@@ -74,6 +74,7 @@ let trackMap = null;
 let trackMarker = null;
 let bikerMarker = null;
 let activeOrderId = null;
+let clearedCollectedIds = new Set();
 let notifications = [];
 let currentCustomer = null;
 
@@ -395,10 +396,13 @@ function listenToOrders() {
     });
 
     renderHistory(myOrders);
-
-    // Find most recent active order
+    
+    // Find most recent order to show as "active". A COLLECTED order is
+    // still allowed through ONCE so updateTrackingUI() can render its final
+    // state and clean up after itself - excluding it immediately here was
+    // freezing the page on whatever status was shown right before COLLECTED.
     const active = myOrders
-      .filter(([, o]) => o.status !== "COLLECTED")
+      .filter(([id, o]) => !(o.status === "COLLECTED" && clearedCollectedIds.has(id)))
       .sort(([, a], [, b]) => b.timestamp - a.timestamp)[0];
 
     if (active) {
@@ -477,6 +481,24 @@ function updateTrackingUI(order) {
     // page is ready for the next order.
     document.getElementById("customer-pin-section").classList.add("hidden");
     document.getElementById("customer-pin-display").textContent = "-";
+
+    if (!clearedCollectedIds.has(order.orderId)) {
+      showToast("🎉 Delivery complete! Enjoy your parcel.", "success", 5000);
+      clearedCollectedIds.add(order.orderId);
+
+      // Give the customer a moment to see "Package Collected", then reset
+      // the whole Track Delivery card back to its placeholder state - ready
+      // for the next order instead of freezing on this one.
+      setTimeout(() => {
+        if (activeOrderId !== order.orderId) return; // a newer order took over meanwhile
+        document.getElementById("track-order-id").textContent = "Order #-";
+        const badge = document.getElementById("track-status-badge");
+        badge.textContent = "-";
+        badge.className = "badge badge-gray";
+        document.getElementById("status-timeline").innerHTML = "";
+        activeOrderId = null;
+      }, 4000);
+    }
   }
 
   // Show biker position on map if ENROUTE/ARRIVED
@@ -504,6 +526,8 @@ window.confirmCollection = async function () {
 // Parcel-in-locker reminder banner - replaces the GSM "your parcel is
 // inside" SMS. Stays visible for as long as the box reports it present.
 // ---------------------------------------------------------------------------
+let orderReminderActive = false;
+
 function updateParcelReminderBanner(order) {
   const banner = document.getElementById("parcel-reminder-banner");
   const text = document.getElementById("parcel-reminder-text");
@@ -511,6 +535,8 @@ function updateParcelReminderBanner(order) {
   const awaitingCollection =
     ["DELIVERED", "CUSTOMER_AUTH_OK", "COLLECTION_REQUESTED"].includes(order.status) &&
     order.parcelPresent !== false;
+
+  orderReminderActive = awaitingCollection;
 
   if (!awaitingCollection) {
     banner.classList.add("hidden");
@@ -524,6 +550,22 @@ function updateParcelReminderBanner(order) {
   } else {
     text.textContent =
       "📦 Your parcel is in the locker. Use your PIN to collect it whenever you're ready.";
+  }
+}
+
+// Fallback reminder when there's no active order to attach it to (e.g. a
+// previous delivery that was never collected). Only shows when the
+// order-specific reminder above isn't already covering it.
+function updateGlobalParcelReminder(present) {
+  if (orderReminderActive) return; // order-specific reminder takes priority
+  const banner = document.getElementById("parcel-reminder-banner");
+  const text = document.getElementById("parcel-reminder-text");
+  if (present) {
+    banner.classList.remove("hidden");
+    text.textContent =
+      "📦 There may be a parcel in the locker from a previous delivery. Use the keypad (# open / * close) or check with support.";
+  } else {
+    banner.classList.add("hidden");
   }
 }
 
@@ -711,9 +753,11 @@ function renderNotifications() {
 // Locker status pill
 // ---------------------------------------------------------------------------
 function listenToLockerStatus() {
-  onValue(ref(db, "locker/status"), (snap) => {
-    const s = snap.val() || "IDLE";
-    document.getElementById("locker-status-pill").textContent = "Locker: " + s;
+  onValue(ref(db, "locker"), (snap) => {
+    const locker = snap.val() || {};
+    document.getElementById("locker-status-pill").textContent =
+      "Locker: " + (locker.status || "IDLE");
+    updateGlobalParcelReminder(locker.parcelPresent);
   });
 }
 
