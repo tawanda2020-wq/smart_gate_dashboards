@@ -96,6 +96,12 @@
         </div>
       </div>
 
+      <div id="parcel-reminder-banner" class="hidden"
+        style="margin:16px 24px 0;padding:12px 16px;border-radius:var(--radius-md);background:#FEF3C7;border:1px solid #F59E0B;color:#92400E;font-size:14px;display:flex;align-items:center;gap:8px">
+        <span style="font-size:18px">📦</span>
+        <span id="parcel-reminder-text">Your parcel is waiting in the locker.</span>
+      </div>
+
       <div class="main-content">
 
         <!-- ── SECTION: Place Order ─────────────────────────────────────────── -->
@@ -203,7 +209,12 @@
                 style="text-align:center;padding:16px;background:var(--gray-100);border-radius:var(--radius-md)">
                 <p style="margin-bottom:8px;font-weight:600">🔑 Your Retrieval PIN</p>
                 <div id="customer-pin-display" class="pin-box">-</div>
-                <p class="text-sm text-muted mt-2">Enter this on the yard-side keypad to collect your parcel.</p>
+                <p class="text-sm text-muted mt-2">Enter this on the yard-side keypad, or type it below to open the box from here.</p>
+                <div style="display:flex;gap:8px;margin-top:12px">
+                  <input id="web-pin-input" type="text" inputmode="numeric" maxlength="4" placeholder="Type PIN"
+                    style="flex:1;padding:10px;border-radius:var(--radius-sm);border:1px solid var(--gray-300);text-align:center;letter-spacing:4px;font-weight:700">
+                  <button class="btn btn-outline" onclick="submitWebPin()">Open</button>
+                </div>
                 <button id="btn-confirm-collection" class="btn btn-primary w-full mt-3" disabled onclick="confirmCollection()">
                   Enter PIN on keypad first
                 </button>

@@ -170,7 +170,12 @@ window.showSection = function (name) {
   document
     .querySelectorAll(".nav-link")
     .forEach((l) => l.classList.remove("active"));
-  event.currentTarget.classList.add("active");
+  // Don't rely on the implicit `event` global - only valid inside a real
+  // click handler. Called programmatically (after an `await`), it's stale
+  // or undefined and throws, which was firing the error toast right after
+  // the success toast even though the order saved fine.
+  const navLink = document.querySelector(`.nav-link[onclick*="showSection('${name}')"]`);
+  if (navLink) navLink.classList.add("active");
 
   // Lazy-init track map
   if (name === "track" && !trackMap) initTrackMap();
@@ -422,6 +427,8 @@ function updateTrackingUI(order) {
   badge.className = "badge " + statusClass(order.status);
 
   renderTimeline(order.status);
+  updateParcelReminderBanner(order);
+  checkBreachAlert(order);
 
   // Show destination pin on track map
   if (trackMap && order.gpsLat && order.gpsLon) {
@@ -491,6 +498,70 @@ window.confirmCollection = async function () {
     status: "COLLECTION_REQUESTED",
   });
   showToast("Confirming with locker...", "info", 4000);
+};
+
+// ---------------------------------------------------------------------------
+// Parcel-in-locker reminder banner - replaces the GSM "your parcel is
+// inside" SMS. Stays visible for as long as the box reports it present.
+// ---------------------------------------------------------------------------
+function updateParcelReminderBanner(order) {
+  const banner = document.getElementById("parcel-reminder-banner");
+  const text = document.getElementById("parcel-reminder-text");
+
+  const awaitingCollection =
+    ["DELIVERED", "CUSTOMER_AUTH_OK", "COLLECTION_REQUESTED"].includes(order.status) &&
+    order.parcelPresent !== false;
+
+  if (!awaitingCollection) {
+    banner.classList.add("hidden");
+    return;
+  }
+
+  banner.classList.remove("hidden");
+  if (order.parcelConfirmed === false) {
+    text.textContent =
+      "Your biker dropped off your parcel, but our sensor couldn't fully confirm it's inside - please verify when you collect.";
+  } else {
+    text.textContent =
+      "📦 Your parcel is in the locker. Use your PIN to collect it whenever you're ready.";
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Security alert - replaces the GSM breach-attempt SMS
+// ---------------------------------------------------------------------------
+function checkBreachAlert(order) {
+  if (
+    (order.breachAttempts || 0) > 0 &&
+    !notifications.some((n) => n.msg.includes("Security alert"))
+  ) {
+    addNotification(
+      "🚨 Security alert: 3 failed PIN attempts were detected on your locker. The system locked itself as a precaution.",
+      activeOrderId,
+      true,
+    );
+    showToast(
+      "🚨 Security alert on your locker - check Notifications.",
+      "error",
+      8000,
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Virtual keypad - type the PIN here instead of using the physical keypad
+// (useful while the ESP8266 customer-keypad bridge is unreliable).
+// ---------------------------------------------------------------------------
+window.submitWebPin = async function () {
+  const input = document.getElementById("web-pin-input");
+  const pin = input.value.trim();
+  if (!/^\d{4}$/.test(pin)) {
+    showToast("Enter the 4-digit PIN", "warning");
+    return;
+  }
+  await update(ref(db, `orders/${activeOrderId}`), { webPinEntry: pin });
+  showToast("Sent to locker - opening...", "info", 4000);
+  input.value = "";
 };
 
 function listenBikerPosition(bikerId, destLat, destLon) {
@@ -565,7 +636,7 @@ function renderHistory(myOrders) {
         <td><span class="badge ${statusClass(o.status)}">${statusLabel(o.status)}</span></td>
         <td>${formatTimestamp(o.timestamp)}</td>
         <td>
-          <button class="btn btn-sm btn-outline" onclick="viewOrder('${id}')">Track</button>
+          ${o.status !== "COLLECTED" ? `<button class="btn btn-sm btn-outline" onclick="viewOrder('${id}')">Track</button>` : '<span class="text-muted text-sm">-</span>'}
         </td>
       </tr>
     `,
@@ -651,7 +722,12 @@ function listenToLockerStatus() {
 // ---------------------------------------------------------------------------
 window.logout = function () {
   sessionStorage.removeItem("sg_customer_phone");
-  currentCustomer = null;
-  document.getElementById("dashboard").classList.add("hidden");
-  document.getElementById("login-screen").classList.remove("hidden");
+  // Full reload, not just hiding the dashboard. Logging in a second time in
+  // the same tab without reloading left old Firebase listeners and the
+  // Leaflet map instance alive - the map re-init would throw, silently
+  // aborting initDashboard() partway through and leaving the PREVIOUS
+  // customer's listenToOrders() as the only one ever running. That's why a
+  // second account in the same tab kept showing the first customer's data.
+  location.reload();
 };
+
