@@ -424,6 +424,7 @@ function listenToOrders() {
 }
 
 function updateTrackingUI(order) {
+  console.log(order);
   document.getElementById("track-order-id").textContent =
     "Order #" + order.orderId?.slice(-6);
   const badge = document.getElementById("track-status-badge");
