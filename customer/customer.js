@@ -553,7 +553,7 @@ function updateParcelReminderBanner(order) {
       "📦 Your parcel is in the locker. Use your PIN to collect it whenever you're ready.";
     if(order.parcelPresent === false){
       text.textContent =
-      "Your biker dropped off your parcel, but our sensor couldn't fully confirm it's inside - please verify when you collect.";
+      "📦 Biker dropped off your parcel, but our sensor couldn't fully confirm it's inside - please verify when you collect.";
     }
   }
 }
